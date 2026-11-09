@@ -1,3 +1,4 @@
+import { getPreferenceValues } from "@vicinae/api";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -44,28 +45,50 @@ export async function listWindows(): Promise<FinderWindow[]> {
 
 const FINDER_BUNDLE = "com.apple.finder";
 
-async function frontIsFinder(): Promise<boolean> {
+async function frontBundle(): Promise<string> {
   try {
     const { stdout: asn } = await run("lsappinfo", ["front"]);
     const { stdout } = await run("lsappinfo", ["info", "-only", "bundleid", asn.trim()]);
-    return stdout.includes(FINDER_BUNDLE);
+    return stdout.match(/"([^"]+)"\s*$/)?.[1] ?? stdout.trim();
   } catch {
-    return true; // can't tell: don't fight
+    return "";
   }
 }
 
+// Captured when the command process starts: for the hotkey (no-view) command
+// that is still the app the user came from.
+const startFront = frontBundle();
+
+const GUARD_MAX_MS = Number(process.env.FF_GUARD_MAX_MS ?? 800);
+
 /**
- * Vicinae hands focus back to the previously active app shortly after the
- * launcher closes, which would undo our activation. Run `activate` straight
- * away (no fixed wait), then keep watching for ~1.2 s and re-activate if
- * Finder lost the focus again.
+ * Vicinae can hand focus back to the previously active app right after the
+ * launcher closes, which would undo our activation. Activate straight away,
+ * then (unless the "keepFocus" preference is off) watch for a short while and
+ * re-activate Finder only when focus went back to the app that was frontmost
+ * before the launch. A deliberate switch to any other app is never fought, and
+ * the watch ends once Finder has held the focus for ~300 ms.
  */
 export async function focusGuard(activate: () => Promise<void>): Promise<void> {
+  const { keepFocus } = getPreferenceValues<{ keepFocus?: boolean }>();
+  let previous = keepFocus === false ? "" : await startFront;
+  // The launcher itself is no useful "previous app": then fight any handback.
+  if (previous.toLowerCase().includes("vicinae")) previous = "";
   await activate();
-  for (let i = 0; i < 10; i++) {
-    await new Promise((r) => setTimeout(r, 120));
-    if (!(await frontIsFinder())) {
+  if (keepFocus === false) return;
+  const start = Date.now();
+  let heldSince: number | null = null;
+  while (Date.now() - start < GUARD_MAX_MS) {
+    await new Promise((r) => setTimeout(r, 60));
+    const front = await frontBundle();
+    if (front === FINDER_BUNDLE) {
+      heldSince ??= Date.now();
+      if (Date.now() - heldSince >= 300) return;
+    } else if (previous === "" || front === previous || front === "") {
+      heldSince = null;
       await osascript(`tell application "Finder" to activate`);
+    } else {
+      return; // deliberate switch to a third app
     }
   }
 }

@@ -11,7 +11,14 @@ Jump to Finder from [Vicinae](https://vicinae.com) on macOS, without touching th
 - **Finder Windows** (list): every open Finder window with its folder. Enter focuses it.
   Includes a "Merge all windows into one" item (Finder's *Window > Merge All Windows*).
 
-Preference: *Always show the window list* skips the direct-focus shortcut.
+Preferences:
+
+- *Always show the window list*: skip the direct-focus shortcut and always list windows.
+- *Re-activate Finder if focus is taken back* (`keepFocus`, on by default): right after the
+  launcher closes, focus can be handed back to the app you came from. When this is on, the
+  extension watches for at most 0.8 s and re-activates Finder if that happens. It stops as soon
+  as Finder has held focus for ~300 ms and never fights a switch to a different app. Turn it off
+  in Vicinae Settings > Extensions > Finder Finder if Finder grabs focus again after you switch away quickly.
 
 ## Install
 
@@ -45,4 +52,4 @@ To rebuild from source: `npm install && npm run build` (installs into `~/.local/
 - Finder reports tabs of a merged window as separate windows via AppleScript, so tabs
   appear as separate entries. A tab cannot be reliably told apart from a window on another Space.
 - Vicinae hands focus back to the previous app shortly after the launcher closes; the
-  extension re-activates Finder for ~1.2 s to compensate.
+  extension can re-activate Finder briefly to compensate (see the *keepFocus* preference).
