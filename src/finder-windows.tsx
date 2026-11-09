@@ -3,6 +3,7 @@ import {
   ActionPanel,
   Icon,
   List,
+  LaunchProps,
   closeMainWindow,
   getPreferenceValues,
   showHUD,
@@ -14,19 +15,40 @@ import {
   focusFinder,
   focusWindow,
   listWindows,
+  mergeAllWindows,
+  settle,
 } from "./finder";
 
-export default function Command() {
+export default function Command(props: LaunchProps) {
   const { alwaysShowList } = getPreferenceValues<{ alwaysShowList?: boolean }>();
-  const [windows, setWindows] = useState<FinderWindow[] | null>(null);
+  const passed = props.launchContext?.windows;
+  const [windows, setWindows] = useState<FinderWindow[] | null>(() => {
+    try {
+      return typeof passed === "string" ? (JSON.parse(passed) as FinderWindow[]) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const merge = async () => {
+    await closeMainWindow();
+    await settle();
+    try {
+      await mergeAllWindows();
+    } catch (error) {
+      await showHUD(describeError(error));
+    }
+  };
 
   useEffect(() => {
+    if (windows !== null) return; // handed over by the no-view command
     (async () => {
       try {
         const found = await listWindows();
         // Nothing to choose between: act immediately, no interaction needed.
         if (!alwaysShowList && found.length <= 1) {
           await closeMainWindow();
+          await settle();
           await focusFinder();
           return;
         }
@@ -40,6 +62,7 @@ export default function Command() {
 
   const pick = async (w: FinderWindow) => {
     await closeMainWindow();
+    await settle();
     try {
       await focusWindow(w.id);
     } catch (error) {
@@ -58,11 +81,23 @@ export default function Command() {
           actions={
             <ActionPanel>
               <Action title="Focus Window" onAction={() => pick(w)} />
-              <Action title="Focus Finder" onAction={async () => { await closeMainWindow(); await focusFinder(); }} />
+              <Action title="Focus Finder" onAction={async () => { await closeMainWindow(); await settle(); await focusFinder(); }} />
             </ActionPanel>
           }
         />
       ))}
+      {windows && windows.length > 1 && (
+        <List.Item
+          key="merge"
+          title="Merge all windows into one"
+          icon={Icon.Layers}
+          actions={
+            <ActionPanel>
+              <Action title="Merge All Windows" onAction={merge} />
+            </ActionPanel>
+          }
+        />
+      )}
     </List>
   );
 }

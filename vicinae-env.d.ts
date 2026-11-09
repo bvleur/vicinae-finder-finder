@@ -13,14 +13,24 @@ type ExtensionPreferences = {
 declare type Preferences = ExtensionPreferences
 
 declare namespace Preferences {
-  /** Command: Finder Windows */
+  /** Command: FinderFinder */
+	export type FinderFinder = ExtensionPreferences & {
+		
+	}
+
+	/** Command: Finder Windows */
 	export type FinderWindows = ExtensionPreferences & {
 		
 	}
 }
 
 declare namespace Arguments {
-  /** Command: Finder Windows */
+  /** Command: FinderFinder */
+	export type FinderFinder = {
+		
+	}
+
+	/** Command: Finder Windows */
 	export type FinderWindows = {
 		
 	}
