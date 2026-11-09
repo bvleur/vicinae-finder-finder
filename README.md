@@ -15,15 +15,25 @@ Preference: *Always show the window list* skips the direct-focus shortcut.
 
 ## Install
 
-```bash
-git clone git@github.com:bvleur/vicinae-finder-finder.git
-cd vicinae-finder-finder
-npm install
-npm run build   # installs into ~/.local/share/vicinae/extensions/finder-finder
+The repo root is the installable extension: the built command bundles are committed, so no build step is needed.
+
+```
+finder-finder.js      built "FinderFinder" command (no-view)
+finder-windows.js     built "Finder Windows" command (list)
+package.json          manifest
+assets/               icon
+src/                  TypeScript sources (only needed to rebuild)
 ```
 
-Restart Vicinae (`vicinae server`) so it picks the extension up, then assign a hotkey
-to **FinderFinder** in Vicinae Settings > Extensions.
+```bash
+git clone git@github.com:bvleur/vicinae-finder-finder.git ~/.local/share/vicinae/extensions/finder-finder
+vicinae server   # restart so Vicinae picks it up
+```
+
+Then assign a hotkey to **FinderFinder** in Vicinae Settings > Extensions.
+Command ids: `@bvleur/finder-finder:finder-finder` and `@bvleur/finder-finder:finder-windows`.
+
+To rebuild from source: `npm install && npm run build` (installs into `~/.local/share/vicinae/extensions/finder-finder/`).
 
 ## Permissions (macOS)
 
