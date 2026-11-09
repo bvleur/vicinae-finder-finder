@@ -16,7 +16,8 @@ import {
   focusWindow,
   listWindows,
   mergeAllWindows,
-  settle,
+  focusGuard,
+  trace,
 } from "./finder";
 
 export default function Command(props: LaunchProps) {
@@ -32,9 +33,11 @@ export default function Command(props: LaunchProps) {
 
   const merge = async () => {
     await closeMainWindow();
-    await settle();
     try {
       await mergeAllWindows();
+      await new Promise((r) => setTimeout(r, 400));
+      const left = await listWindows();
+      trace(`after merge: ${left.length} windows: ${JSON.stringify(left)}`);
     } catch (error) {
       await showHUD(describeError(error));
     }
@@ -48,8 +51,7 @@ export default function Command(props: LaunchProps) {
         // Nothing to choose between: act immediately, no interaction needed.
         if (!alwaysShowList && found.length <= 1) {
           await closeMainWindow();
-          await settle();
-          await focusFinder();
+          await focusGuard(focusFinder);
           return;
         }
         setWindows(found);
@@ -62,9 +64,8 @@ export default function Command(props: LaunchProps) {
 
   const pick = async (w: FinderWindow) => {
     await closeMainWindow();
-    await settle();
     try {
-      await focusWindow(w.id);
+      await focusGuard(() => focusWindow(w.id));
     } catch (error) {
       await showHUD(describeError(error));
     }
@@ -81,7 +82,7 @@ export default function Command(props: LaunchProps) {
           actions={
             <ActionPanel>
               <Action title="Focus Window" onAction={() => pick(w)} />
-              <Action title="Focus Finder" onAction={async () => { await closeMainWindow(); await settle(); await focusFinder(); }} />
+              <Action title="Focus Finder" onAction={async () => { await closeMainWindow(); await focusGuard(focusFinder); }} />
             </ActionPanel>
           }
         />

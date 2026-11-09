@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { appendFileSync, existsSync } from "node:fs";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
@@ -9,8 +10,19 @@ export type FinderWindow = {
   path: string;
 };
 
+const t0 = Date.now();
+/** Timing trace; only active while /tmp/ff-debug exists. */
+export function trace(label: string) {
+  try {
+    if (existsSync("/tmp/ff-debug"))
+      appendFileSync("/tmp/ff-trace.log", `${new Date().toISOString()} +${Date.now() - t0}ms ${label}\n`);
+  } catch {}
+}
+
 async function osascript(script: string): Promise<string> {
+  trace("osascript start");
   const { stdout } = await run("osascript", ["-e", script]);
+  trace("osascript done");
   return stdout.trim();
 }
 
@@ -42,9 +54,36 @@ export async function listWindows(): Promise<FinderWindow[]> {
     });
 }
 
-/** Vicinae hands focus back to the previously active app shortly after the
- *  launcher closes; wait that out before activating Finder. */
-export const settle = () => new Promise<void>((r) => setTimeout(r, 700));
+const FINDER_BUNDLE = "com.apple.finder";
+
+async function frontIsFinder(): Promise<boolean> {
+  try {
+    const { stdout: asn } = await run("lsappinfo", ["front"]);
+    const { stdout } = await run("lsappinfo", ["info", "-only", "bundleid", asn.trim()]);
+    return stdout.includes(FINDER_BUNDLE);
+  } catch {
+    return true; // can't tell: don't fight
+  }
+}
+
+/**
+ * Vicinae hands focus back to the previously active app shortly after the
+ * launcher closes, which would undo our activation. Run `activate` straight
+ * away (no fixed wait), then keep watching for ~1.2 s and re-activate if
+ * Finder lost the focus again.
+ */
+export async function focusGuard(activate: () => Promise<void>): Promise<void> {
+  await activate();
+  trace("activated");
+  for (let i = 0; i < 10; i++) {
+    await new Promise((r) => setTimeout(r, 120));
+    if (!(await frontIsFinder())) {
+      trace("focus lost, re-activating");
+      await osascript(`tell application "Finder" to activate`);
+    }
+  }
+  trace("guard done");
+}
 
 /** Open a new Finder window centred on the main display (60% x 70%) and focus it. */
 export async function openCenteredWindow(): Promise<void> {
@@ -66,11 +105,22 @@ export async function openCenteredWindow(): Promise<void> {
 
 /** Bring Finder to the front, opening a centred window if there is none. */
 export async function focusFinder(): Promise<void> {
-  const count = Number(
-    await osascript(`tell application "Finder" to return (count of windows) as string`),
-  );
-  if (count === 0) await openCenteredWindow();
-  else await osascript(`tell application "Finder" to activate`);
+  await osascript(`
+    tell application "Finder"
+      if (count of windows) is 0 then
+        set b to bounds of window of desktop
+        set sw to (item 3 of b) - (item 1 of b)
+        set sh to (item 4 of b) - (item 2 of b)
+        set w to round (sw * 0.6)
+        set h to round (sh * 0.7)
+        set l to (item 1 of b) + round ((sw - w) / 2)
+        set t to (item 2 of b) + round ((sh - h) / 2)
+        set nw to make new Finder window
+        set bounds of nw to {l, t, l + w, t + h}
+      end if
+      activate
+    end tell
+  `);
 }
 
 /** Raise one specific Finder window (un-minimising it if needed). */
