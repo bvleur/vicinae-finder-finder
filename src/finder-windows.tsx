@@ -17,7 +17,6 @@ import {
   listWindows,
   mergeAllWindows,
   focusGuard,
-  trace,
 } from "./finder";
 
 export default function Command(props: LaunchProps) {
@@ -35,9 +34,7 @@ export default function Command(props: LaunchProps) {
     await closeMainWindow();
     try {
       await mergeAllWindows();
-      await new Promise((r) => setTimeout(r, 400));
-      const left = await listWindows();
-      trace(`after merge: ${left.length} windows: ${JSON.stringify(left)}`);
+
     } catch (error) {
       await showHUD(describeError(error));
     }

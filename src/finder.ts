@@ -1,5 +1,4 @@
 import { execFile } from "node:child_process";
-import { appendFileSync, existsSync } from "node:fs";
 import { promisify } from "node:util";
 
 const run = promisify(execFile);
@@ -10,19 +9,8 @@ export type FinderWindow = {
   path: string;
 };
 
-const t0 = Date.now();
-/** Timing trace; only active while /tmp/ff-debug exists. */
-export function trace(label: string) {
-  try {
-    if (existsSync("/tmp/ff-debug"))
-      appendFileSync("/tmp/ff-trace.log", `${new Date().toISOString()} +${Date.now() - t0}ms ${label}\n`);
-  } catch {}
-}
-
 async function osascript(script: string): Promise<string> {
-  trace("osascript start");
   const { stdout } = await run("osascript", ["-e", script]);
-  trace("osascript done");
   return stdout.trim();
 }
 
@@ -74,15 +62,12 @@ async function frontIsFinder(): Promise<boolean> {
  */
 export async function focusGuard(activate: () => Promise<void>): Promise<void> {
   await activate();
-  trace("activated");
   for (let i = 0; i < 10; i++) {
     await new Promise((r) => setTimeout(r, 120));
     if (!(await frontIsFinder())) {
-      trace("focus lost, re-activating");
       await osascript(`tell application "Finder" to activate`);
     }
   }
-  trace("guard done");
 }
 
 /** Open a new Finder window centred on the main display (60% x 70%) and focus it. */
