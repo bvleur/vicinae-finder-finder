@@ -22,19 +22,12 @@ Preferences:
 
 ## Install
 
-The repo root is the installable extension: the built command bundles are committed, so no build step is needed.
+Download `finder-finder.tar.gz` from the [latest release](../../releases/latest) and unpack it in `~/.local/share/vicinae/extensions/finder-finder/`, then restart Vicinae (`vicinae server`). My [dotfiles](https://github.com/bvleur/dotfiles) install it with chezmoi (`.chezmoiexternal`) from a pinned release.
 
-```
-finder-finder.js      built "FinderFinder" command (no-view)
-finder-windows.js     built "Finder Windows" command (list)
-package.json          manifest
-assets/               icon
-src/                  TypeScript sources (only needed to rebuild)
-```
+The built command bundles (`finder-finder.js`, `finder-windows.js`) are also committed in the repo root, so cloning the repo into the extensions folder still works without a build:
 
 ```bash
 git clone git@github.com:bvleur/vicinae-finder-finder.git ~/.local/share/vicinae/extensions/finder-finder
-vicinae server   # restart so Vicinae picks it up
 ```
 
 Then assign a hotkey to **FinderFinder** in Vicinae Settings > Extensions.
@@ -53,3 +46,20 @@ To rebuild from source: `npm install && npm run build` (installs into `~/.local/
   appear as separate entries. A tab cannot be reliably told apart from a window on another Space.
 - Vicinae hands focus back to the previous app shortly after the launcher closes; the
   extension can re-activate Finder briefly to compensate (see the *keepFocus* preference).
+
+## Release
+
+<!-- release:start -->
+Current version: [v0.1.1](https://github.com/bvleur/vicinae-finder-finder/releases/tag/v0.1.1) ([all release notes](https://github.com/bvleur/vicinae-finder-finder/releases))
+<!-- release:end -->
+
+Release from GitHub: **Actions > Release > Run workflow**, pick `major`, `minor` or `patch`. The workflow bumps `package.json` and this README (`scripts/release.sh`), pushes the release commit and tag, builds the extension and creates the GitHub release with generated release notes and `finder-finder.tar.gz` attached.
+
+Or locally:
+
+```bash
+scripts/release.sh patch   # or minor / major: bumps package.json and this README, tags and pushes
+scripts/release.sh --check # every tag has a GitHub release and this README names the latest version
+```
+
+Pushing a `v*` tag by hand runs the same build and release steps. Release notes are the [GitHub releases](../../releases).
