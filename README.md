@@ -50,7 +50,7 @@ To rebuild from source: `npm install && npm run build` (installs into `~/.local/
 ## Release
 
 <!-- release:start -->
-Current version: [v0.1.1](https://github.com/bvleur/vicinae-finder-finder/releases/tag/v0.1.1) ([all release notes](https://github.com/bvleur/vicinae-finder-finder/releases))
+Current version: [v0.1.2](https://github.com/bvleur/vicinae-finder-finder/releases/tag/v0.1.2) ([all release notes](https://github.com/bvleur/vicinae-finder-finder/releases))
 <!-- release:end -->
 
 Release from GitHub: **Actions > Release > Run workflow**, pick `major`, `minor` or `patch`. The workflow bumps `package.json` and this README (`scripts/release.sh`), pushes the release commit and tag, builds the extension and creates the GitHub release with generated release notes and `finder-finder.tar.gz` attached.
